@@ -690,15 +690,22 @@ function is_new_schema() {
 }
 
 function ldap_add_or_modify() {
-  local ldif_file=$1
-  sed -i "s|<BASE_DN>|${BASE_DN}|g" $ldif_file
-  sed -i "s|<BACKEND>|${BACKEND}|g" $ldif_file
-  if grep -iq changetype $ldif_file; then
-    silent ldapmodify -Y EXTERNAL -Q -H ldapi:/// -f $ldif_file
-  else
-    silent ldapadd -Y EXTERNAL -Q -H ldapi:/// -f $ldif_file
-  fi
-}
+      local ldif_file=$1
+
+      ldif_name=$(basename $ldif_file)
+      local tmpd=$(mktemp -d)
+      temp_file=$tmpd/$ldif_name
+      cp $ldif_file $temp_file
+
+      sed -i "s|<BASE_DN>|${BASE_DN}|g" $temp_file
+      sed -i "s|<BACKEND>|${BACKEND}|g" $temp_file
+
+      if grep -iq changetype $temp_file; then
+        ldapmodify -Y EXTERNAL -Q -H ldapi:/// -f $temp_file
+      else
+        ldapadd -Y EXTERNAL -Q -H ldapi:/// -f $temp_file
+      fi
+    }
 
 function schema2ldif() {
   schemas=$1
